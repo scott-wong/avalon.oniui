@@ -233,11 +233,11 @@ define(["avalon", "text!./avalon.menu.html", "css!./avalon.menu.css", "css!../ch
                 if(!arr.length) return
                 var sub = vmodel._subMenus[vmodel.active]
                 sub && sub.setActiveList(arr.slice(1))
-                if(vmodel._depth === 1) {
-                    vmodel._onSelect({
-                        srcElement: vmodel._getNodeByData(arr)
-                    }, vmodel.getActiveList())
-                }
+                // if(vmodel._depth === 1) {
+                //     vmodel._onSelect({
+                //         srcElement: vmodel._getNodeByData(arr)
+                //     }, vmodel.getActiveList())
+                // }
             }
 
             // 是否有子menu
@@ -288,7 +288,7 @@ define(["avalon", "text!./avalon.menu.html", "css!./avalon.menu.css", "css!../ch
                 })
             }
             vm._restMenu = function(model) {
-                model.resetMenu(model)
+                model.menuResetter(model)
                 model._oldActive = model.active
             }
 
@@ -305,7 +305,6 @@ define(["avalon", "text!./avalon.menu.html", "css!./avalon.menu.css", "css!../ch
     widget.defaults = {
         active:false, //@param 将第几个项目设置为选中，级联情形下，会将设置应用给每一级menu，默认是false，一个都不选中，建议不要通过修改这个值来修改menu的选中状态，而是通过setActiveList接口来做
         //data: undefined, //@param menu的数据项，如果没有配置这个项目，则默认扫描元素中的li，以及li中的ul或者ol来创建级联菜单，数据结构形式 <pre>[/n{/ntitle: "html",/n data: [...],/n active: false,/n disabled: false/n}/n]</pre>，子元素如果包含有效的data属性表示拥有子菜单
-        _avtive:[], //\@param 
         event: "mouseenter",    //@param  选中事件，默认mouseenter
         disabled: false,
         _depth: 1,
@@ -313,9 +312,9 @@ define(["avalon", "text!./avalon.menu.html", "css!./avalon.menu.css", "css!../ch
         dir: "h", //@param 方向，取值v,h，默认h是水平方向， v是竖直方向
         //@optMethod onInit(vmodel, options, vmodels) 完成初始化之后的回调,call as element's method
         onInit: avalon.noop,
-        resetMenu: function(vmodel) {
+        menuResetter: function(vmodel) {
             vmodel.active = false
-        }, //@optMethod resetMenu(vmodel) 重置menu的配置方法，默认是重置为一个都不选中
+        }, //@optMethod menuResetter(vmodel) 选中某个menu项之后调用的这个restter，默认是把menu重置为不选中
         getTemplate: function(tmpl, opts, tplName) {
             return tmpl
         },//@optMethod getTemplate(tpl, opts, tplName) 定制修改模板接口

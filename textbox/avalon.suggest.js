@@ -1,4 +1,4 @@
-define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-common.css", "css!./avalon.suggest.css"], function(avalon, sourceHTML) {
+define(["../avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-common.css", "css!./avalon.suggest.css"], function(avalon, sourceHTML) {
     var widget = avalon.ui.suggest = function(element, data, vmodels) {
 
         var $element = avalon(element),
@@ -31,18 +31,26 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
             vm.toggle = false;
             vm.loading = false;
             vm.selectedIndex = 0;
+            vm._renderItem = function(item) {
+                return vmodel.renderItem(item, vmodel);
+            }
+            
             // 监控toggle值变化，当toggle为true时更新提示框尺寸
             vm.$watch('toggle', function(v) {
-                var inputElement = options.inputElement;
+                var inputElement = options.inputElement,
+                    textboxContainer = options.textboxContainer,
+                    $inputElement = avalon(inputElement),
+                    $textboxContainer = avalon(textboxContainer);
                 if( v ) {
-                    if (options.textboxContainer === inputElement) {
+                    if (textboxContainer === inputElement) {
                         var offset = $element.offset(),
-                            suggestHtmlWidth = (inputElement.clientWidth+parseInt(avalon.css(inputElement,"padding-left"))+parseInt(avalon.css(inputElement,"padding-right")))+"px";
+                            suggestHtmlWidth = $inputElement.width()+"px";
                         element.style.cssText = "position: absolute; left:"+offset.left+"px;top:"+offset.top+"px;";
                         
                         suggestHtml.style.cssText = "margin:0;left:0;top:0;width:"+suggestHtmlWidth ;
+                        return ;
                     }
-                    suggestHtml.style.width = options.textboxContainer.clientWidth+"px" ;
+                    suggestHtml.style.width = ($textboxContainer.outerWidth()-2)+"px" ;
                 }
             })
             // 监控searchText值的变化，及时更新提示列表?
@@ -62,7 +70,7 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
             }
             // 处理提示项的鼠标点击，也就是更新input值，同时隐藏提示框?
             vm.clickcallback = function(idx, event) {
-                vmodel.onchange(vmodel.list[idx].value, vmodel.list[idx].$model, event);
+                vmodel.onchange(vmodel.list[idx].value, vmodel.inputElement, event);
                 vm.toggle = false;
             }
             // 如果input元素配置了suggest-focus项，则执行此条件块?
@@ -77,8 +85,8 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
                     }
                 })
             }
-            if (options.changed) {
-                var arr = avalon.getModel( options.changed , vmodels );
+            if (options.onChange) {
+                var arr = avalon.getModel( options.onChange , vmodels );
                 var _onchange = vm.onchange;
                 vm.onchange = function(){
                     _onchange.apply( null , arguments );
@@ -107,7 +115,7 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
                             event.preventDefault();
                             if (!vmodel.toggle) return ;
                             vmodel.toggle = false;
-                            vmodel.onchange( vmodel.list[vmodel.selectedIndex].value , vmodel.list[vmodel.selectedIndex].$model, event );
+                            vmodel.onchange( vmodel.list[vmodel.selectedIndex].value , vmodel.inputElement, event );
                         break;
                         case 38:
                             // up arrow
@@ -116,7 +124,7 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
                             if (vmodel.selectedIndex === -1) {
                                 vmodel.selectedIndex = vmodel.list.length - 1
                             }
-                            vmodel.onchange( vmodel.list[vmodel.selectedIndex].value , vmodel.list[vmodel.selectedIndex].$model, event );
+                            vmodel.onchange( vmodel.list[vmodel.selectedIndex].value , vmodel.inputElement, event );
                         break;
                         case 40:
                             // down arrow
@@ -125,14 +133,14 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
                             if (vmodel.selectedIndex === vmodel.list.length) {
                                 vmodel.selectedIndex = 0
                             }
-                            vmodel.onchange( vmodel.list[vmodel.selectedIndex].value , vmodel.list[vmodel.selectedIndex].$model, event );
+                            vmodel.onchange( vmodel.list[vmodel.selectedIndex].value , vmodel.inputElement, event );
                         break;
                         default:
                             vmodel.searchText = this.value || String.fromCharCode(event.which);
                         break;
                     }
                 })
-                avalon.bind(options.inputElement, "blur", vm.hidepromptinfo);
+                avalon.bind(document, "click", vm.hidepromptinfo);
                 avalon.nextTick(function() {
                     element.appendChild(suggestHtml);
                     avalon.scan(element, [vmodel].concat(vmodels)); 
@@ -149,7 +157,7 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
             if( !s ) return;
             vm.loading = true;
             // 根据提示类型提供的方法过滤的数据来渲染提示视图?
-            s(value, function(err, array){
+            s(value, function(array){
                 vm.selectedIndex = 0;
                 vm.list.removeAll();
                 avalon.each(array , function(idx, val){
@@ -180,12 +188,15 @@ define(["avalon.getModel", "text!./avalon.suggest.html","css!../chameleon/oniui-
         strategy : "__getVal" , 
         textboxContainer : "" ,
         focus : false ,
-        changed : false
+        changed : false,
+        renderItem : function(item, vmodel) {
+            return item.replace(vmodel.searchText, "<b style='color:#f55'>$&</b>")
+        }
     };
     // 根据提示类型的不同提供提示信息，也就是信息的过滤方式完全由用户自己决定?
     avalon.ui["suggest"].strategies = {
         __getVal: function(value, done) {
-            done( null , value ? [
+            done(value ? [
                 value + "1" ,
                 value + "2" ,
                 value + "3" ,

@@ -1,7 +1,7 @@
 
 avalon.oniui
 ==========================
-基于avalon的组件库,由<a href="http://www.qunar.com/">去哪儿网</a>前端架构组倾力打造
+基于avalon的组件库,由<a href="http://hotelued.qunar.com/">去哪儿网</a>前端架构组倾力打造
 <p>当前进度表</p>
 <ul>
     <li>UI组件，有界面的，通过ms-widget调用</li>
@@ -90,7 +90,7 @@ avalon.oniui
         <td colspan=4>第2期</td>
     </tr>
    <tr>
-        <td>json</td><td>功能组件</td><td>缺文档示例</td><td>钟，json2</td>
+        <td>json</td><td>功能组件</td><td>完成</td><td>钟，json2</td>
     </tr>
     <tr>
         <td>cookie</td><td>功能组件</td><td>完成</td><td>钟，cookie</td>
@@ -99,34 +99,37 @@ avalon.oniui
         <td>store</td><td>功能组件</td><td>完成</td><td>钟，本地储存</td>
     </tr>
     <tr>
-        <td>lazyload</td><td>功能组件</td><td></td><td>懒加载</td>
+        <td>promise</td><td>功能组件</td><td>完成</td><td>钟, es6的Promise组件</td>
+    </tr>
+    <tr>
+        <td>colorpicker</td><td>UI组件</td><td>完成</td><td>王，颜色选择器</td>
+    </tr>
+    <tr>
+        <td>lazyload</td><td>功能组件</td><td>完成</td><td>懒加载</td>
     </tr>
     <tr>
         <td>editor</td><td>UI组件</td><td></td><td>富文本编辑器</td>
     </tr>
     <tr>
-        <td>menu</td><td>UI组件</td><td></td><td>多级菜单</td>
+        <td>menu</td><td>UI组件</td><td>完成</td><td>多级菜单</td>
     </tr>
     <tr>
-        <td>tree</td><td>UI组件</td><td></td><td>树</td>
+        <td>tree</td><td>UI组件</td><td>开发中</td><td>树</td>
     </tr>
     <tr>
         <td>waterfall</td><td>UI组件</td><td></td><td>瀑布流</td>
     </tr>
     <tr>
-        <td> button</td><td>UI组件</td><td></td><td>按钮， http://www.bootcss.com/p/buttons/</td>
+        <td> button</td><td>UI组件</td><td>完成</td><td>按钮</td>
     </tr>
     <tr>
-        <td> marquee</td><td>UI组件</td><td></td><td>多个照片</td>
+        <td> carousel</td><td>UI组件</td><td>完成</td><td>单个照片http://owlgraphic.com/owlcarousel/demos/custom.html</td>
     </tr>
     <tr>
-        <td> carousel</td><td>UI组件</td><td></td><td>单个照片</td>
+        <td> rating</td><td>UI组件</td><td>完成</td><td>林 星级评分</td>
     </tr>
     <tr>
-        <td> rating</td><td>UI组件</td><td></td><td> 星级评分</td>
-    </tr>
-    <tr>
-        <td> uploader</td><td>UI组件</td><td></td><td> 上传</td>
+        <td> uploader</td><td>UI组件</td><td>完成</td><td> 上传</td>
     </tr>
     <tr>
         <td>preview</td><td>UI组件</td><td>完成</td><td>钟， 图片预览</td>
@@ -138,7 +141,7 @@ avalon.oniui
         <td> imagecropper</td><td>UI组件</td><td></td><td> 图片剪切</td>
     </tr>
     <tr>
-        <td> validator</td><td>功能组件</td><td></td><td> 验证框架</td>
+        <td> validator</td><td>功能组件</td><td>完成</td><td> 验证框架</td>
     </tr>
 </table>
 如何使用OniUI
@@ -149,6 +152,9 @@ avalon.oniui
    <li>其他同学可以到<a href="https://github.com/RubyLouvre/avalon">avalon项目</a>，将它的server.exe（一个迷你的.Net服务器）文件拷过来，然后运行它，选中index.html打开</li>
 </ul>
 <img src="https://raw.githubusercontent.com/RubyLouvre/avalon.oniui/master/style/homepage.jpg"/>
+license
+==========================
+MIT
 如何为OniUI贡献一套新的皮肤
 ==========================
 <b>chameleon</b>是OniUI的皮肤生成系统,基于sass的compass框架改写而成.
@@ -284,3 +290,20 @@ $ui-state-error-color: #ff8888!global;
 }
 ```
 改成这些，重新编译一下就行了。
+
+LOGO的来历
+==========================
+Oni日语为鬼, 可以美化一下叫英灵
+在fate/Zero这部动画中, 最强大的英灵就是"金闪闪"吉尔伽美什
+而吉尔伽美什对应的咒令就是 远坂时臣的那个
+<div><img src="http://i.imgur.com/jezsx.jpg"/></div>
+<div><img  src="http://i-7.vcimg.com/crop/26fb9dd7fa1a77169a869b31df5b576f12700(280x)/thumb.jpg"/></div>
+<div><a href="<div><a href=""><img width=400 height=300 src="http://www.fate-zero.jp/talksession/img/talk_bg-archer.jpg"/></a></div>
+http://baike.baidu.com/view/2850010.htm
+http://baike.baidu.com/subview/666734/7383298.htm?fromtitle=FateZero&fromid=5097473&type=syn#6_4
+
+https://github.com/jxnblk/loading
+http://touch.code.baidu.com/
+
+移动端上的皮肤
+http://goratchet.com/components/

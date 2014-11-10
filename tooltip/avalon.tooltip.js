@@ -2,7 +2,7 @@
   * @description tooltip组件，给一个元素或者给元素里满足配置条件的系列元素添加一个富UI及交互的气泡提示框
   *
   */
-define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "css!./avalon.tooltip.css","css!../chameleon/oniui-common.css"], function(avalon, template) {
+define(["avalon", "text!./avalon.tooltip.html", "../position/avalon.position",  "css!./avalon.tooltip.css","css!../chameleon/oniui-common.css"], function(avalon, template) {
 
     var widget = avalon.ui.tooltip = function(element, data, vmodels) {
         var options = data.tooltipOptions
@@ -143,7 +143,7 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
                 if(vmodel.event == "mouseenter" && vmodel.delegate) {
                     vmodel.event = "mouseover"
                 }
-                element.setAttribute("ms-" + vmodel.event, "__show($event)")
+                vmodel.event && element.setAttribute("ms-" + vmodel.event, "__show($event)")
                 tooltipElem = tooltipELementMaker()
                 avalon.scan(tooltipElem, [vmodel].concat(vmodels))
                 avalon.scan(element, [vmodel].concat(vmodels))
@@ -157,10 +157,11 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
             vm.$remove = function() {
                 if(tooltipElem && tooltipElem.parentNode) tooltipElem.parentNode.removeChild(tooltipElem)
             }
-            //@method show(elem) 显示tooltip，相对于elem定位，elem为元素或者event事件对象，如果elem为空，则采用之前缓存的对象，两者都为空，则只展示，不改变位置
+            //@method show(elem) 不建议使用这个方法，请使用showBy({target: ele})显示tooltip，相对于elem定位，elem为元素或者event事件对象，如果elem为空，则采用之前缓存的对象，两者都为空，则只展示，不改变位置
             vm.show = function(elem) {
                 if(vmodel.disabled || !tooltipElem) return
                 tooltipElem.style.display = "block"
+                if(!vmodel.toggle) vmodel.toggle = true
                 if(elem == void 0) elem = ofElement
                 if(elem) {
                     ofElement = elem
@@ -195,7 +196,7 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
                         of: elem, 
                         at: tipElemAt, 
                         my: tipElemMy, 
-                        collision: "none", 
+                        collision: vmodel.collision, 
                         within: document.body
                     })
                      // position组件自动调整的时候调整箭头上下朝向
@@ -315,6 +316,9 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
             //@method hide($event) 隐藏tooltip，参数是$event，可缺省
             vm.hide = function(e) {
                 e && e.preventDefault && e.preventDefault()
+                vmodel.toggle = false
+            }
+            vm._hide = function(e) {
                 if(!tooltipElem) return
                 if(vmodel.animated && !!-[1,]) {
                     clearInterval(animateTimer)
@@ -338,7 +342,7 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
                 if(vmodel.toggle) {
                     vmodel.toggle = false
                 } else {
-                    vmodel.hide()
+                    vmodel._hide()
                 }
             }
             vm.__show = function(event, force) {
@@ -408,7 +412,10 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
                     }
                 }
             }
-
+            //@method showBy($event) 参数满足 {target: elem}这样，或者是一个elem元素亦可，tooltip会按照elem定位，并作为参数传递给contentGetter
+            vm.showBy = function(obj) {
+                vmodel._show(obj && obj.tagName ? {target: obj} : obj)
+            }
             vm._isShown = function() {
                 var elem = avalon(tooltipElem)
                 return elem.css("display") != "none" && !elem.hasClass("ui-tooltip-hidden")
@@ -444,7 +451,7 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
             if(n) {
                 vmodel._show(vmodel.track && _track_event || _event)
             } else {
-                vmodel.hide()
+                vmodel._hide()
             }
         })
 
@@ -456,7 +463,8 @@ define(["avalon", "text!./avalon.tooltip.html", "position/avalon.position",  "cs
     //methodName: code, \/\/@optMethod optMethodName(args) description 
     widget.defaults = {
         toggle: false, //@param 组件是否显示，可以通过设置为false来隐藏组件
-        "event": "mouseenter",  //@param 显示tooltip的事件，默认hover的时候显示tooltip，为false的时候就不绑定事件，如果后面设置了自动隐藏，则mouseenter对应的是mouseleave,focus对应的是blur，进行自动隐藏事件侦听，使用代理的时候，目测不支持focus,blur
+        "collision": "none",//@param 溢出检测，当被定位元素在某些方向上溢出窗口，则移动它到另一个位置。与 my 和 at 选项相似，该选项会接受一个单一的值或一对 horizontal/vertical 值。例如："flip"、"fit"、"fit flip"、"fit none"。/n"flip"：翻转元素到目标的相对一边，再次运行 collision 检测一遍查看元素是否适合。无论哪一边允许更多的元素可见，则使用那一边。/n"fit"：把元素从窗口的边缘移开。/n"flipfit"：首先应用 flip 逻辑，把元素放置在允许更多元素可见的那一边。然后应用 fit 逻辑，确保尽可能多的元素可见。/n"none": 不检测
+        "event": "mouseenter",  //@param 显示tooltip的事件，默认hover的时候显示tooltip，为false的时候就不绑定事件，如果后面设置了自动隐藏，则mouseenter对应的是mouseleave,focus对应的是blur，进行自动隐藏事件侦听，使用代理的时候，目测不支持focus,blur，event可以配置为空，则不会添加事件侦听
         //"content": "",        /\/\@param tooltip显示内容，默认去获取element的title属性
         "width": "auto",        //@param tip宽度，默认是auto
         "height": "auto",       //@param tip高度，默认是auto    

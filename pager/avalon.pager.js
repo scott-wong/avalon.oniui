@@ -29,28 +29,19 @@ define(["avalon",
         var vmodel = avalon.define(data.pagerId, function(vm) {
             avalon.mix(vm, options)
             vm.widgetElement = element
-            vm.$skipArray = ["showPages", "widgetElement", "template", "ellipseText", "alwaysShowPrev", "alwaysShowNext"]//这些属性不被监控
+            vm.$skipArray = ["showPages", "widgetElement", "template", "ellipseText", "alwaysShowPrev", "alwaysShowNext"]
+            //这些属性不被监控
             vm.$init = function() {
                 var pageHTML = options.template
-                if (vmodel.alwaysShowPrev) {
-                    pageHTML = pageHTML.replace('ms-if="firstPage!==1"', "")
-                }
-                if (vmodel.alwaysShowNext) {
-                    var index = 0
-                    pageHTML = pageHTML.replace(/ms-if="lastPage!==totalPages"/g, function(a) {
-                        index++
-                        if (index == 3) {
-                            return ""
-                        } else {
-                            return a
-                        }
-                    })
-                }
+                element.style.display = "none"
                 element.innerHTML = pageHTML
-                avalon.scan(element, [vmodel].concat(vmodels))
-                if (typeof options.onInit === "function") {
-                    options.onInit.call(element, vmodel, options, vmodels)
-                }
+                setTimeout(function() {
+                    avalon.scan(element, [vmodel].concat(vmodels))
+                    element.style.display = "block"
+                    if (typeof options.onInit === "function") {
+                        options.onInit.call(element, vmodel, options, vmodels)
+                    }
+                }, 100)
             }
             vm.$remove = function() {
                 element.innerHTML = element.textContent = ""
@@ -89,19 +80,40 @@ define(["avalon",
                 efficientChangePages(vm.pages, getPages(vm))
             })
             vm.$watch("perPages", function(a) {
-                vm.perPages = parseInt(vm.perPages, 10)
+                vm.currentPage = 1
                 efficientChangePages(vm.pages, getPages(vm))
             })
             vm.$watch("currentPage", function(a) {
                 vmodel._currentPage = a
+                efficientChangePages(vm.pages, getPages(vm))
             })
+            vm.isShowPrev = function() {
+                var a = vm.alwaysShowPrev;
+                var b = vm.firstPage
+                return a || b !== 1
+            }
+            vm.isShowNext = function() {
+                var a = vm.alwaysShowNext
+                var b = vm.lastPage
+                var c = vm.totalPages
+                return a || b !== c
+            }
 
-            vm.changeCurrentPage = function(e) {
-                if (e.type === "keyup" && e.keyCode !== 13)
+            vm.changeCurrentPage = function(e, value) {
+                if (e.type === "keyup") {
+                    value = this.value
+                    if (e.keyCode !== 13)
+                        return
+                } else {
+                    value = vmodel._currentPage
+                }
+                value = parseInt(value, 10) || 1
+                if (value > vmodel.totalPages || value < 1)
                     return
                 //currentPage需要转换为Number类型 fix lb1064@qq.com
-                vmodel.currentPage = parseInt(vmodel._currentPage, 10)
+                vmodel.currentPage = value
                 vmodel.pages = getPages(vmodel)
+                vmodel.onJump.call(element, e, vm);
             }
             vm.pages = []
             vm.getPages = getPages
@@ -171,23 +183,34 @@ define(["avalon",
         lastPage: 0, //当前可显示的最大页码，不能大于totalPages
         alwaysShowNext: false, //总是显示向后按钮
         alwaysShowPrev: false, //总是显示向前按钮
+        showFirstOmit: false,
+        showLastOmit: false,
         showJumper: false, //是否显示输入跳转台
         getTemplate: function(tmpl, opts) {
             return tmpl
         },
         onJump: avalon.noop, //页面跳转时触发的函数
-        getTitle: function(a) {
+        getTitle: function(a, currentPage, totalPages) {
             switch (a) {
                 case "first":
-                    return "Go To First Page"
+                    if (currentPage == 1) {
+                        return "当前页"
+                    }
+                    return "跳转到第一页"
                 case "prev":
-                    return "Go To Previous Page"
+                    return "跳转到上一页"
                 case "next":
-                    return "Go To Next Page"
+                    return "跳转到下一页"
                 case "last":
-                    return "Go To Last Page"
+                    if (currentPage == totalPages) {
+                        return "当前页"
+                    }
+                    return "跳转到最后一页"
                 default:
-                    return "Go to page " + a + ""
+                    if (a === currentPage) {
+                        return "当前页"
+                    }
+                    return "跳转到第" + a + "页"
             }
         }
     }
@@ -218,13 +241,14 @@ define(["avalon",
                 }
             }
         }
-        vm.firstPage = pages[0] | 1
-        vm.lastPage = pages[pages.length - 1] | 0
+        vm.firstPage = pages[0] || 1
+        vm.lastPage = pages[pages.length - 1] || 1
+        vm.showFirstOmit = vm.firstPage > 2
+        vm.showLastOmit = vm.lastPage < max - 1
         return  pages//[0,1,2,3,4,5,6]
     }
     return avalon
 })
 //http://luis-almeida.github.io/jPages/defaults.html
 //http://gist.corp.qunar.com/jifeng.yao/gist/demos/pager/pager.html
-
 

@@ -1,14 +1,16 @@
 <div class="ui-dropdown"
-     ms-class="ui-dropdown-disabled:!enable"
+     ms-class="ui-state-disabled:!enable"
+     ms-class-1="{{titleClass}}"
      ms-css-width="{{width}}"
-     ms-click="_toggle"
-     ms-blur="_blur"
+     ms-class-2="ui-state-focus: focusClass"
      ms-hover="ui-state-hover"
      ms-keydown="_keydown"
      tabindex="0">
     <div class="ui-dropdown-source">
         <div class="ui-dropdown-input"
-             ms-title="label">{{label}}</div>
+             ms-title="title"
+             ms-css-width="titleWidth"
+             id="title-MS_OPTION_ID">{{label|sanitize|html}}</div>
         <div class="ui-dropdown-icon-wrap">
             <i class="ui-dropdown-icon ui-icon ui-icon-angle-up"
                ms-if="toggle">&#xf106;</i>
@@ -20,6 +22,7 @@
 MS_OPTION_TEMPLATE
 <div class="ui-dropdown"
      ms-class="ui-dropdown-menu:!multiple"
+     ms-class-1="{{listClass}}"
      ms-css-width="{{listWidth}}"
      ms-mouseenter="_listenter"
      ms-mouseleave="_listleave"
@@ -31,8 +34,7 @@ MS_OPTION_TEMPLATE
          ms-widget="scrollbar,scrollbar-MS_OPTION_ID" id="menu-MS_OPTION_ID">
         <div class="ui-scrollbar-scroller"
              id="list-MS_OPTION_ID">
-            <div ms-repeat="data"  class="ui-dropdown-item" 
-                 data-repeat-rendered="updateScrollbar" 
+            <div ms-repeat="data" data-repeat-rendered="updateScrollbar" class="ui-dropdown-item"
                  ms-click-12="_select($index, $event)"
                  ms-title="el.title||el.label"
                  ms-hover="ui-state-hover: el.enable"
@@ -40,7 +42,6 @@ MS_OPTION_TEMPLATE
                  ms-class-2="ui-state-active:isActive(el) "
                  ms-class-4="ui-dropdown-group:el.group"
                  ms-class-5="ui-dropdown-divider:el.group && !$first"
-                 data-repeat-rendered="updateScrollbar"
                  >{{el.label|sanitize|html}}</div>
         </div>
     </div>

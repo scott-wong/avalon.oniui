@@ -9,13 +9,17 @@
 <script src="../highlight/shCore.js"></script>
 <script src="../avalon.js"></script>
 </head>
-<body class="ms-controller">
+<body>
     <div class="wrapper">
         <h1>daterangepicker demo</h1>
         <div class="demo-show" ms-controller="demo">
             <fieldset>
                 <legend>日期范围框 配置日期的显示规则和解析规则</legend>
                 <div ms-widget="daterangepicker, a, $aOpts"></div>
+            </fieldset>
+            <fieldset>
+                <legend>配置日期选择快捷按钮</legend>
+                <div ms-widget="daterangepicker" data-daterangepicker-shortcut="true"></div>
             </fieldset>
             <script> 
                 require("datepicker/avalon.daterangepicker", function(avalon) {

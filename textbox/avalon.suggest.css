@@ -10,11 +10,10 @@
   position: absolute;
   top: 3px;
   left: -6px;
-  max-height: 110px;
-  overflow-y: auto;
   z-index: 1;
   border: 1px solid #cccccc;
   padding: 0;
+  margin: 0;
   background-color: #ffffff; }
   .ui-suggest .ui-suggest-item {
     overflow: hidden;

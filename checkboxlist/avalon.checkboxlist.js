@@ -1,69 +1,42 @@
-define(["avalon.getModel", "text!./avalon.checkboxlist.html", "css!../chameleon/oniui-common.css", "css!./avalon.checkboxlist.css"], function(avalon, template) {
+define(["../avalon.getModel", "text!./avalon.checkboxlist.html", "css!../chameleon/oniui-common.css", "css!./avalon.checkboxlist.css"], function(avalon, template) {
 
     var widget = avalon.ui.checkboxlist = function(element, data, vmodels) {
-        // 获取配置项        
-        var getVMFunc = (function(data){
-            return function (name , isGetSet) {
-                if(!options[name] ) return avalon.noop;
-                avalon.mix(vmodels, data);
-                avalon.parseExprProxy(options[name] , vmodels , data , isGetSet ? 'duplex' : null);
-                
-                return data.evaluator.apply(0, data.args);
-            }
-        })(data);
-        var options = data.checkboxlistOptions;
-        var onfetch = getVMFunc('fetch');
-        var onselect = getVMFunc('onSelect');
-        options.template = options.getTemplate(template, options);
-
+        var options = data.checkboxlistOptions,
+            fetchVM = typeof options.fetch === "string" ? avalon.getModel(options.fetch, vmodels) : options.fetch,
+            fetchFunc = fetchVM && avalon.type(fetchVM) === "array" && fetchVM[1][fetchVM[0]] || options.fetch || null,
+            onSelectVM = typeof options.onSelect === "string" ? avalon.getModel(options.onSelect, vmodels) : false,
+            onSelect = onSelectVM && onSelectVM[1][onSelectVM[0]] || avalon.noop,
+            onfetch = avalon.type(fetchFunc) === "function" ? fetchFunc : null;
+        
         var vmodel = avalon.define(data.checkboxlistId, function(vm) {
             avalon.mix(vm, options);
-            vm.$skipArray = ["widgetElement", "template"];
+            vm.$skipArray = ["widgetElement", "template", "keys"];
             vm.widgetElement = element;
-            vm.alltext = options.alltext !== undefined ? options.alltext : options.allText;
-            // 判断是否全部选中
-            vm.isAll = function() {
-                var arr = vm.data.$model.map(function(obj){
-                    return obj.value || obj.name;
-                });
-                var allChecked = true
-                arr = Array.prototype.slice.call(arr,0);
-                avalon.each(arr, function(i, key) {
-                    // 通过vm.checkStatus对象来判断是否为全选中状态
-                    if(!vm.checkStatus[key]) {
-                        allChecked = false;
-                    }
-                })
-                return allChecked;
-            }
+            vm.keys = [];
             // 点击全选按钮之后的回调
             vm._clickAll = function(event) {
-                var checkStatus = event.target.checked;
-                avalon.each(vm.checkStatus.$model, function(key) {
-                    vm.checkStatus[key] = checkStatus;
-                })
-                if (options.duplex) {
+                setTimeout(function() {
+                    var checkStatus = event.target.checked;
                     if (checkStatus) {
-                        avalon.each(vm.checkStatus.$model, function(key) {
-                            // 数组不存在key时添加key
-                            $dlist.ensure(key);
-                        })
+                        duplexVM[1][duplexVM[0]] = vmodel.keys.map(function(el) {
+                            return el + ""
+                        });
                     } else {
-                        $dlist.clear();
+                        duplexVM[1][duplexVM[0]].clear()
                     }
-                }
-                // 执行onselect回调
-                onselect.apply(0, [vm.data.$model, checkStatus, event.target]);
+                    // 执行onselect回调
+                    onSelect.apply(0, [vm.data.$model, checkStatus, event.target]);
+                }, 20)
             }
             // 选中某一项之后的回调操作
             vm._clickOne = function(event,index) {
-                vm.checkStatus[vm.data[index].$model.value] = event.target.checked;
-                onselect.apply(0, [vm.data.$model, event.target.checked, event.target]);
+                onSelect.apply(0, [vm.data.$model, event.target.checked, event.target]);
             }
             vm.$init = function() {
-                options.template = options.template.replace("MS_OPTIONS_DUPLEX", options.duplex);
+                var temp = template.replace("MS_OPTIONS_DUPLEX", options.duplex);
+                vmodel.template = vmodel.getTemplate(temp, options);
                 element.className += " ui-checkboxlist ui-checkboxlist-list ui-helper-clearfix";
-                element.innerHTML = options.template;
+                element.innerHTML = vmodel.template;
                 avalon.scan(element, [vmodel].concat(vmodels));
                 if(typeof options.onInit === "function" ){
                     //vmodels是不包括vmodel的
@@ -74,20 +47,32 @@ define(["avalon.getModel", "text!./avalon.checkboxlist.html", "css!../chameleon/
                 element.innerHTML = "";
             };
         })
-        var arr = avalon.getModel( options.duplex , [vmodel].concat(vmodels) );
-        var $dlist = arr[1][arr[0]];
-        element.value = $dlist.$model.join(",");
+        var duplexVM = avalon.getModel(options.duplex, [vmodel].concat(vmodels)),
+            duplexArr = duplexVM && duplexVM[1][duplexVM[0]]
+
+        vmodel.data.$watch("length", function(len) {
+            if (len) {
+                setKeys(vmodel, duplexArr)
+            }
+        })
+        
+        if (!duplexArr) {
+            throw new Error("未配置duplex")
+        }
+        element.value = duplexArr.$model.join(",");
         // 为了兼容 jvalidator，将ul的value同步为duplex的值
-        $dlist.$watch("length", function(newValue) { // 当选中checkbox或者全校选中时判断vmodel.all，从而判断是否选中"全选"按钮
+        duplexArr.$watch("length", function(newValue) { // 当选中checkbox或者全校选中时判断vmodel.all，从而判断是否选中"全选"按钮
             if (newValue == 0 ) {
                 element.value = "";
             } else {
-                element.value = $dlist.join(",");
+                element.value = duplexVM[1][duplexVM[0]].join(",");
             }
-            avalon.nextTick(function() {
-                vmodel.all = (newValue == vmodel.data.length);
-            });
+            vmodel.all = (newValue == vmodel.data.length);
         })
+        if (vmodel.data.length) {
+            setKeys(vmodel, duplexArr)
+            return vmodel
+        }
         if (options.fetch) {
             /*
                 通过回调返回数据，数据结构必须是
@@ -99,7 +84,12 @@ define(["avalon.getModel", "text!./avalon.checkboxlist.html", "css!../chameleon/
             // 取到数据之后进行视图的渲染
             onfetch.apply(0, [function(data) {
                 vmodel.data = data;
-                syncCheckStatus(vmodel);
+                var data = [];
+                
+                avalon.each(vmodel.data, function(index, item) {
+                    data.push(item.value || item.text);
+                })
+                vmodel.keys = data;
             }])
         } else {
             var fragment = document.createElement("div");
@@ -129,7 +119,7 @@ define(["avalon.getModel", "text!./avalon.checkboxlist.html", "css!../chameleon/
                             txt = "";
                         // 获取离input最近的父级li元素
                         while(li) {
-                            if (li.tagName = "LI") {
+                            if (li.tagName == "LI") {
                                 break;
                             } else {
                                 li = li.parentNode;
@@ -140,37 +130,36 @@ define(["avalon.getModel", "text!./avalon.checkboxlist.html", "css!../chameleon/
                         txt.replace(/^\s+/, "").replace(/\s+$/,"");
                         // 将提取出来的数据保存在data中
                         data.push({
-                            text: (!~txt.indexOf(vmodel.allText) && txt),
+                            text: txt,
                             value: input.value || txt
                         });
                     }
                 break;
             }
             vmodel.data = data;
-            syncCheckStatus();
-        }
-        /* 根据duplex的配置信息判断data中哪些选项是被选中的，哪些是不被选中的，不被选中的选项的key对应0，选中选项的key对应其在duplex中的位置取反 */
-        function syncCheckStatus() {
-            var modelArr = avalon.getModel(options.duplex, [vmodel].concat(vmodels));
-            var duplex_list = modelArr[1][arr[0]];
-            duplex_list = duplex_list && duplex_list.$model ? duplex_list.$model : [];
-            var obj = {}
-            avalon.each(vmodel.data.$model, function(idx,o){
-                var key = o.value || o.text;
-                // 按位取反运算符,实际就是原值+1取负
-                obj[ key ] = ~duplex_list.indexOf(key);
-            })
-            vmodel.checkStatus = obj;
-            vmodel.all = vmodel.isAll();
         }
         return vmodel;
+    }
+    function setKeys(vmodel, duplexVM) {
+        var data = [],
+            allChecked = true
+        duplexVM = duplexVM && duplexVM.$model
+        avalon.each(vmodel.data, function(index, item) {
+            data.push(item.value || item.text);
+        })
+        vmodel.keys = data;
+        avalon.each(data, function(index, item) {
+            if (duplexVM.indexOf(item) === -1) {
+                allChecked = false
+            }
+        })
+        vmodel.all = allChecked
     }
     widget.version = 1.0
     widget.defaults = {
         data: [], // 所有选项值的集合，通过此数据来渲染初始视图
         all: false, // 默认不选中所有选项
-        checkStatus: {}, // 通过此对象判断选框的选中状态，从而选中或者不选中对应选框
-        allText: "全部", // 显示"全部"按钮，方便进行全选或者全不选操作
+        alltext: "全部", // 显示"全部"按钮，方便进行全选或者全不选操作
         type: "" , // 内置type为week时的data，用户只需配置type为week即可显示周一到周日的选项 
         /*
             通过配置fetch来获得要显示的数据，数据格式必须如下所示：
@@ -182,7 +171,8 @@ define(["avalon.getModel", "text!./avalon.checkboxlist.html", "css!../chameleon/
             ]
         */
         fetch: "", 
-        onSelect: "", // 通过配置onSelect来进行选中或者不选中选框的回调操作
+        template: "",
+        onSelect: avalon.noop, // 通过配置onSelect来进行选中或者不选中选框的回调操作
         getTemplate: function(tmpl, options) {
             return tmpl
         },

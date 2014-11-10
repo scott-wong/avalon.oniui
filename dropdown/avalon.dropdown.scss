@@ -20,6 +20,7 @@ $ui-divider-state-default-color: #f2f2f2;
     @include inline-block();
     outline: none;
     //上方的显示区
+
     .#{$uiname}-source {
         border: 1px solid map-get($ui-source, defaultBorderColor);
         background-color: map-get($ui-source, defaultBg);
@@ -34,6 +35,7 @@ $ui-divider-state-default-color: #f2f2f2;
             word-break: normal;
             word-wrap: normal;
         }
+
     }
     .ui-icon{
         cursor: pointer;
@@ -44,6 +46,11 @@ $ui-divider-state-default-color: #f2f2f2;
     &.ui-state-hover {
         .#{$uiname}-source {
             border-color: map-get($ui-source, hoverBoderColor);
+        }
+    }
+    &.ui-state-focus {
+        .#{$uiname}-source {
+            border-color: #3775c0
         }
     }
     &.ui-state-disabled {
@@ -151,6 +158,14 @@ $ui-divider-state-default-color: #f2f2f2;
             background-color: $ui-state-disabled-background-color;
             color: $ui-state-disabled-color;
         }
+        //掠过
+        &.ui-state-hover {
+          @if($oinui-theme == smoothness){
+            border-color:  $ui-state-hover-border-color;
+            background-color: $ui-state-hover-border-color;
+            color: $ui-state-hover-color;
+          }
+        }
         //选中
         &.ui-state-active {
             border-color: $ui-state-active-border-color;
@@ -158,17 +173,6 @@ $ui-divider-state-default-color: #f2f2f2;
             color: $ui-state-active-color;
             .ui-icon {
                 color: $oniui-icon-state-hover-color;
-            }
-        }
-        //掠过
-        &.ui-state-hover {
-            @if($oinui-theme == smoothness){
-                border-color:  $ui-state-hover-border-color;
-                background-color: $ui-state-hover-border-color;
-                color: $ui-state-hover-color;
-            }
-            .ui-icon {
-                color: $oniui-icon-state-active-color;
             }
         }
     }

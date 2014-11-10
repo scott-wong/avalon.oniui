@@ -12,7 +12,7 @@ $uiname : ".ui-doublelist";
 	) !global;
 } @else {
 }
-#{$uiname} {
+div#{$uiname} {
 	// current style
 	// means #{$pr}-bar
 	font-size:12px;
@@ -40,7 +40,7 @@ $uiname : ".ui-doublelist";
 	}
 	li {
 		list-style: none;
-		padding: 3px 6px;
+		padding: 5px 6px;
 		cursor: pointer;
 		color: map-get($doublelist, fontColor);
 	}
@@ -56,9 +56,11 @@ $uiname : ".ui-doublelist";
 		color: $ui-state-disabled-color;
 		background: map-get($doublelist, disableBg);
 	}
-	.ui-button{
+	.ui-dbl-button{
 		height: 24px;
+		*height: auto;
 		line-height: 24px;
+		padding: 0;
 		background-color: map-get($doublelist, buttonBg);
 		border: 1px solid $ui-state-default-border-color;
 		border-radius: 2px;
@@ -66,5 +68,9 @@ $uiname : ".ui-doublelist";
 		text-align: center;
 		margin-top: 10px;
 		cursor: pointer;
+	}
+	&-option div.ui-state-disabled{
+		border-color: #dedede;
+		color: #ccc;
 	}
 }

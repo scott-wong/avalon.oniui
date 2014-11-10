@@ -1,6 +1,6 @@
-define(["avalon.getModel",
+define(["../avalon.getModel",
         "text!./avalon.daterangepicker.html", 
-        "datepicker/avalon.datepicker",
+        "./avalon.datepicker",
         "css!../chameleon/oniui-common.css", 
         "css!./avalon.daterangepicker.css"], function(avalon, sourceHTML) {
     var calendarTemplate = sourceHTML;
@@ -19,166 +19,236 @@ define(["avalon.getModel",
             _oldValue, //保存最近一次选择的起始日期和结束日期组成的日期对象数组，因为当选择了日期但没有点确定按钮时，日期选择范围不改变，相应的对应的日历默认输入域也应该恢复到最近一次的选择
             _toMinDate = "", //保存rules指向的对象的toMinDate属性值，以便于rules属性计算所得的minDate做比较
             _toMaxDate = "", //保存rules指向的对象的toMaxDate属性值，以便于rules属性计算所得的maxDate做比较
-            fromSelected = null;
-        // 结束日期初始异常时默认日期、起始日期和结束日期最小相隔天数、最大相隔天数的设定形式的转化处理
-        var _c = {  
-            '+M': function(time ,n) { //+M表示相隔n个月
-                var _d = time.getDate();
-                time.setMonth(time.getMonth() + n);
-                if(time.getDate() !== _d) {
-                    time.setDate(0)
-                } 
-            },
-            '-M': function(time ,n) { //-M表示相隔n个月不过是追溯到以前的日前
-                var _d = time.getDate();
-                time.setMonth(time.getMonth() - n);
-                if(time.getDate() !== _d) {
-                    time.setDate(0)
-                }
-            },
-            '+D': function(time ,n) { 
-                time.setDate(time.getDate() + n); 
-            },
-            '-D': function(time ,n) { 
-                time.setDate(time.getDate() - n); 
-            },
-            '+Y': function(time ,n) { 
-                time.setFullYear(time.getFullYear() + n); 
-            },
-            '-Y': function(time ,n) { 
-                time.setFullYear(time.getFullYear() - n); 
-            }
-        };
-        options.template = options.getTemplate(calendarTemplate, options);
+            fromSelected = null,
+            datesDisplayFormat = options.opts && options.opts.datesDisplayFormat,
+            rangeRules,
+            parseDate = options.parseDate.bind(options),
+            formatDate = options.formatDate.bind(options);
+        
         // 获取用户定义的模拟输入框显示内容形式的方法
-        if(options.opts && options.opts.datesDisplayFormat && typeof options.opts.datesDisplayFormat ==="function") {
-            options.datesDisplayFormat = options.opts.datesDisplayFormat;
+        if (datesDisplayFormat && typeof datesDisplayFormat ==="function") {
+            options.datesDisplayFormat = datesDisplayFormat
         }
         // 获取rules配置对象
-        if(rules && avalon.type(rules) === 'string') {
-            var ruleVM = avalon.getModel(options.rules, vmodels);
+        if (rules && avalon.type(rules) === 'string') {
+            var ruleVM = avalon.getModel(rules, vmodels)
             rules = ruleVM[1][ruleVM[0]];
         }
-        rules = rules.$model || rules;
-        _toMinDate = rules.toMinDate; 
-        _toMaxDate = rules.toMaxDate; 
-        // 让rules对象的toMinDate、toMaxDate、fromMinDate、fromMaxDate是可监控的属性
-        if(rules) {
-            rules.toMinDate = rules.toMinDate || "";
-            rules.toMaxDate = rules.toMaxDate || "";
-            rules.fromMinDate = rules.fromMinDate || "";
-            rules.fromMaxDate = rules.fromMaxDate || "";
+        rules = rules.$model || rules
+        if (rules) { // 让rules对象的toMinDate、toMaxDate、fromMinDate、fromMaxDate是可监控的属性
+            rules.toMinDate = rules.toMinDate || ""
+            rules.toMaxDate = rules.toMaxDate || ""
+            rules.fromMinDate = rules.fromMinDate || ""
+            rules.fromMaxDate = rules.fromMaxDate || ""
         }
-        options.rules = rules;
-        if(selectFuncVM) {
-            options.onSelect = selectFuncVM[1][selectFuncVM[0]];
+        _toMinDate = rules.toMinDate
+        _toMaxDate = rules.toMaxDate
+        options.rules = rules
+        rangeRules = options.rules && options.rules.rules || ""
+        rangeRules = rangeRules.length > 0 ? rangeRules.split(",") : []
+        if (selectFuncVM) {
+            options.onSelect = selectFuncVM[1][selectFuncVM[0]]
         }
         // 如果disabled配置为字符串，说明是通过外部vm控制组件的禁用与否，取得外部disabled所在vm并监控
-        if(disabled!=="true" && disabled!=="false" && disabledVM) {
-            options.disabled = disabledVM[1][disabledVM[0]];
+        if( disabled !== "true" && disabled !== "false" && disabledVM) {
+            options.disabled = disabledVM[1][disabledVM[0]]
             disabledVM[1].$watch(disabledVM[0], function(val) {
-                vmodel.disabled = val;
+                vmodel.disabled = val
             })
         }
-        var rangeRules = options.rules && options.rules.rules || "";
-        rangeRules = rangeRules.length>0 ? rangeRules.split(",") : [];
+        datesDisplayFormat = options.datesDisplayFormat
+        options.template = options.getTemplate(calendarTemplate, options)
         var vmodel = avalon.define(data.daterangepickerId, function(vm) {
-            avalon.mix(vm, options);
-            vm.msg = "";
-            vm.$skipArray = ["widgetElement","container","inputElement","calendarWrapper"];
-            vm.widgetElement = element;
-            vm.toggle = false;
-            vm.container = null;
-            vm.inputElement = null;
-            vm.calendarWrapper = null;
-            vm.value = "";
+            avalon.mix(vm, options)
+            vm.msg = ""
+            vm.$skipArray = ["widgetElement","container","inputElement","calendarWrapper", "fromLabel", "toLabel"]
+            vm.widgetElement = element
+            vm.toggle = false
+            vm.container = null
+            vm.inputElement = null
+            vm.calendarWrapper = null
             vm.inputFromValue = ""
-            vm.inputToValue = "";
+            vm.inputToValue = ""
             // 切换组件的显示隐藏
             vm._toggleDatepicker = function(val) {
-                if(!vmodel.disabled) {
+                if (!vmodel.disabled) {
                     vmodel.toggle = !val;
                 }
             }
             // 更新日期范围选择框下方的说明文字
             vm._updateMsg = function(event) {
-                var target = event.target;
-                if(target.tagName === "TD") {
-                    updateMsg();
-                    event.stopPropagation();
-                }
+                event.stopPropagation();
             }
             // 点击确定按钮确定日期选择范围
             vm._selectDate = function() {
                 var inputFromValue = inputFrom.value,
                     inputToValue = inputTo.value,
-                    inputFromDate = options.parseDate(inputFromValue),
-                    inputToDate = options.parseDate(inputToValue),
-                    label = options.datesDisplayFormat(options.defaultLabel,inputFromValue, inputToValue),
-                    labelWidth = label.length * 10;
-                vmodel.label = label;
-                _confirmClick = true;
-                vmodel.toggle = false;
-                if (labelWidth > vmodel.dateRangeWidth) {
-                    vmodel.dateRangeWidth = labelWidth;
+                    inputFromDate = parseDate(inputFromValue),
+                    inputToDate = parseDate(inputToValue),
+                    label = datesDisplayFormat(options.defaultLabel,inputFromValue, inputToValue),
+                    p = document.createElement("p"),
+                    $p = avalon(p),
+                    labelWidth = 0,
+                    msg = "";
+                    
+                if (!inputToDate || !inputFromDate) {
+                    msg = (!inputFromDate && !inputToDate) ? "请选择起始日期和结束日期" : !inputFromDate ? "请选择起始日期" : "请选择结束日期"
+                    msg = "<span style='color:#f55'>" + msg + "</span>"
+                    vmodel.msg = msg
+                    return false
                 }
-                options.onSelect.call(vmodel, inputFromDate, inputToDate, _oldValue, vmodel, avalon(element).data());
-                _oldValue = [inputFromDate, inputToDate];
+                if (duplexFrom) {
+                    duplexFrom[1][duplexFrom[0]] = inputFromValue
+                }
+                if (duplexTo) {
+                    duplexTo[1][duplexTo[0]] = inputToValue
+                }
+                vmodel.label = label
+                _confirmClick = true
+                _oldValue = [inputFromDate, inputToDate]
+                vmodel.toggle = false
+                $p.css({position:"absolute",visibility:"hidden",height:0,"font-size": "12px"})
+                p.innerHTML = label
+                document.body.appendChild(p)
+                labelWidth = $p.width() + 30
+                document.body.removeChild(p)
+                if (labelWidth > vmodel.dateRangeWidth) {
+                    vmodel.dateRangeWidth = labelWidth
+                }
+                options.onSelect.call(vmodel, inputFromDate, inputToDate, _oldValue, vmodel, avalon(element).data())
             }
             // 点击取消按钮隐藏日历框
             vm._cancelSelectDate = function() {
-                vmodel.toggle ? vmodel.toggle = false: 0;
+                fromSelected = false
+                vmodel.toggle ? vmodel.toggle = false : 0
+            }
+            vm.getDates = function() {
+                var inputFromDate = parseDate(vmodel.inputFromValue),
+                    inputToDate = parseDate(vmodel.inputToValue);
+                return (inputFromDate && inputToDate && [inputFromDate, inputToDate]) || null
             }
             // 设置日期范围框的起始日期和结束日期
             vm.setDates = function(from, to, defaultLabel) {
                 var inputValues = to === void 0 ? [from] : [from, to],
-                    len = inputValues.length;
-                if(len) {
-                    vmodel.defaultLabel = defaultLabel;
-                    setValues(len, from, to);
+                    len = inputValues.length,
+                    inputFromDate = avalon.type(from) === "date" ? from : parseDate(from),
+                    inputToDate = avalon.type(to) === "date" ? to : parseDate(to);
+                if (len) {
+                    vmodel.defaultLabel = defaultLabel || vmodel.defaultLabel
+                    setValues(len, from, to)
                 } else {
-                    vmodel.label = "";
+                    vmodel.label = ""
                 }
-                initMsgAndOldValue();
+                initMsgAndOldValue()
+                options.onSelect.call(vmodel, inputFromDate, inputToDate, _oldValue, vmodel, avalon(element).data())
+                _oldValue = [inputFromDate, inputToDate]
+            }
+            vm._fixDate = function (dateFrom, dateTo, minDate, maxDate) {
+                var from = new Date(dateFrom.getTime()),
+                    to = new Date(dateTo.getTime());
+                if (minDate) {
+                    from = new Date(Math.max(minDate.getTime(), from))
+                }
+                if (maxDate) {
+                    to = new Date(Math.min(maxDate.getTime() , to))
+                }
+                return [from, to]
+            }
+            vm.quickOperation = function(instruction) {
+                var now = new Date(),
+                    fromDate = now,
+                    toDate = now,
+                    defaultLabel = "今天",
+                    minDate = vmodel.rules.fromMinDate,
+                    maxDate = vmodel.rules.toMaxDate,
+                    dateArr = [];
+                minDate = minDate && parseDate(minDate) || null
+                maxDate = minDate && parseDate(maxDate) || null
+                switch (instruction) {
+                    case "lastDay" :
+                        fromDate = toDate = new Date(now.setDate(now.getDate() - 1))
+                        defaultLabel = "昨天"
+                    break;
+                    case "lastSeventDays" :
+                        fromDate = new Date()
+                        fromDate = new Date(fromDate.setDate(fromDate.getDate()-8))
+                        toDate = new Date()
+                        toDate = new Date(toDate.setDate(toDate.getDate()-1))
+                        defaultLabel = "过去七天"
+                        dateArr = vmodel._fixDate(fromDate, toDate, minDate, maxDate)
+                        fromDate = dateArr[0]
+                        toDate = dateArr[1]
+                    break;
+                    case "currentMonth" :
+                        defaultLabel = "本月"
+                        fromDate = new Date()
+                        fromDate = new Date(fromDate.setDate(1))
+                        dateArr = vmodel._fixDate(fromDate, toDate, minDate, maxDate)
+                        fromDate = dateArr[0]
+                        toDate = dateArr[1]
+                    break;
+                    case "lastMonth" :
+                        defaultLabel = "上个月"
+                        toDate = new Date()
+                        toDate = new Date(toDate.setDate(-1))
+                        fromDate = new Date(new Date(toDate.getTime()).setDate(1))
+                        dateArr = vmodel._fixDate(fromDate, toDate, minDate, maxDate)
+                        fromDate = dateArr[0]
+                        toDate = dateArr[1]
+                    break;
+                }
+                vmodel.setDates(fromDate, toDate, defaultLabel)
+                vmodel.toggle = false
             }
             // 设置日期输入框的label
             vm.setLabel = function(str) {
-                vmodel.label = str;
+                vmodel.label = str
             }
             // 设置日历的禁用与否
             vm.setDisabled = function(val) {
-                vmodel.disabled = val;
+                vmodel.disabled = val
             }
             // 选择了初始日期之后根据rules的设置及时更新结束日期的选择范围
             vm.fromSelectCal = function(date) {
-                applyRules(date);
-                fromSelected = date;
+                applyRules(date)
+                fromSelected = date
             }
             vm.$init = function() {
-                options.template = options.template.replace(/MS_OPTION_START_DAY/g, vmodel.startDay);
-                var daterangepicker = avalon.parseHTML(options.template).firstChild,
-                    inputs = daterangepicker.getElementsByTagName("input"),
-                    container = daterangepicker.children[0],
-                    calendarWrapper = daterangepicker.children[1];
-                inputFrom = inputs[0];
-                inputTo = inputs[1];
-                vmodel.container = container; 
-                vmodel.inputElement = container;
-                vmodel.calendarWrapper = calendarWrapper;   
-                element.appendChild(daterangepicker);
-                initValues();
-                applyRules(vmodel.inputFromValue && options.parseDate(vmodel.inputFromValue) || new Date());
-                avalon.scan(element, [vmodel].concat(vmodels)); 
+                var daterangepicker,
+                    inputs,
+                    container,
+                    calendarWrapper;
+                options.template = options.template.replace(/MS_OPTION_START_DAY/g, vmodel.startDay)
+                daterangepicker = avalon.parseHTML(options.template).firstChild
+                inputs = daterangepicker.getElementsByTagName("input")
+                container = daterangepicker.children[0]
+                calendarWrapper = daterangepicker.children[1]
+                inputFrom = inputs[0]
+                inputTo = inputs[1]
+                vmodel.container = container
+                vmodel.inputElement = container
+                vmodel.calendarWrapper = calendarWrapper 
+                element.appendChild(daterangepicker)
+                avalon.bind(document, "click", function(event) {
+                    var target = event.target
+                    if (!element.contains(target)) {
+                        vmodel.toggle = false
+                    }
+                })
+                initValues()
+                element.init = true
+                applyRules(vmodel.inputFromValue && parseDate(vmodel.inputFromValue))
+                avalon.scan(element, [vmodel].concat(vmodels)) 
                 // 扫描完daterangepicker组件之后才扫描datepicker
                 avalon.nextTick(function() {
-                    inputFrom.setAttribute("ms-widget", "datepicker");
-                    inputTo.setAttribute("ms-widget", "datepicker");
-                    inputFrom.setAttribute("ms-duplex", "inputFromValue");
-                    inputTo.setAttribute("ms-duplex", "inputToValue");
-                    inputFrom.setAttribute("data-toggle", "toggle");
-                    inputTo.setAttribute("data-toggle","toggle");
-                    avalon.scan(inputFrom, [vmodel]);
-                    avalon.scan(inputTo, [vmodel]);
+                    inputFrom.setAttribute("ms-widget", "datepicker")
+                    inputTo.setAttribute("ms-widget", "datepicker")
+                    inputFrom.setAttribute("ms-duplex", "inputFromValue")
+                    inputTo.setAttribute("ms-duplex", "inputToValue")
+                    inputFrom.setAttribute("data-toggle", "toggle")
+                    inputTo.setAttribute("data-toggle","toggle")
+                    avalon.scan(inputFrom, [vmodel])
+                    avalon.scan(inputTo, [vmodel])
                     if(typeof options.onInit === "function" ){
                         //vmodels是不包括vmodel的
                         options.onInit.call(element, vmodel, options, vmodels)
@@ -186,199 +256,243 @@ define(["avalon.getModel",
                 })
             }
             vm.$remove = function() {
-                element.innerHTML = element.textContent = "";
+                element.innerHTML = element.textContent = ""
             }
         })
         vmodel.$watch("inputFromValue", function(val) {
-            var duplexLen = 0;
-            if(vmodel.inputFromValue) {
-                duplexLen += 1;
-            }
-            if(vmodel.inputToValue) {
-                duplexLen += 1;
-            }
-            if(duplexFrom) {
-                duplexFrom[1][duplexFrom[0]] = val;
-                setValues(duplexLen, val, vmodel.inputToValue);
-                updateMsg();
-            }
+            updateMsg()
         })
         vmodel.$watch("inputToValue", function(val) {
-            var duplexLen = 0;
-            if(vmodel.inputFromValue) {
-                duplexLen += 1;
-            }
-            if(vmodel.inputToValue) {
-                duplexLen += 1;
-            }
-            if(duplexTo) {
-                duplexTo[1][duplexTo[0]] = val;
-                setValues(duplexLen, vmodel.inputFromValue, val);
-                updateMsg();
-            }
+            updateMsg()
         })
+        var _c = {  
+            '+M': function(time ,n) { //+M表示相隔n个月
+                var _d = time.getDate()
+                time.setMonth(time.getMonth() + n)
+                if(time.getDate() !== _d) {
+                    time.setDate(0)
+                } 
+            },
+            '-M': function(time ,n) { //-M表示相隔n个月不过是追溯到以前的日前
+                var _d = time.getDate()
+                time.setMonth(time.getMonth() - n)
+                if(time.getDate() !== _d) {
+                    time.setDate(0)
+                }
+            },
+            '+D': function(time ,n) { 
+                time.setDate(time.getDate() + n) 
+            },
+            '-D': function(time ,n) { 
+                time.setDate(time.getDate() - n) 
+            },
+            '+Y': function(time ,n) { 
+                time.setFullYear(time.getFullYear() + n) 
+            },
+            '-Y': function(time ,n) { 
+                time.setFullYear(time.getFullYear() - n) 
+            }
+        }
         // 初始化日期范围值
         function initValues() {
-            if(duplex) {
+            if (duplex) {
                 var duplexLen = duplex.length,
                     duplexVM1 = avalon.getModel(duplex[0].trim(), vmodels),
                     duplexVM2 = duplexLen === 1 ? null : avalon.getModel(duplex[1].trim(), vmodels),
-                    duplexVal1 = duplexVM1[1][duplexVM1[0]],
+                    duplexVal1 = duplexVM1 && duplexVM1[1][duplexVM1[0]] || "",
                     duplexVal2 = duplexVM2 ? duplexVM2[1][duplexVM2[0]] : "";
-                duplexFrom = duplexVM1;
-                duplexTo = duplexVM2;
-                setValues(duplexLen, duplexVal1, duplexVal2);
-                if(duplexVM1) {
+                duplexFrom = duplexVM1
+                duplexTo = duplexVM2
+                setValues(duplexLen, duplexVal1, duplexVal2)
+                if (duplexVM1) {
                     duplexVM1[1].$watch(duplexVM1[0], function(val) {
-                        vmodel.inputFromValue = val;
+                        vmodel.inputFromValue = val
+                        if (parseDate(vmodel.inputToValue) && parseDate(val)) {
+                            vmodel.label = datesDisplayFormat(vmodel.defaultLabel,val, vmodel.inputToValue)
+                        }
                     })
                 }
-                if(duplexVM2) {
+                if (duplexVM2) {
                     duplexVM2[1].$watch(duplexVM2[0], function(val) {
-                        vmodel.inputToValue = val;
+                        vmodel.inputToValue = val
+                        if (parseDate(vmodel.inputFromValue) && parseDate(val)) { 
+                            vmodel.label = datesDisplayFormat(vmodel.defaultLabel,vmodel.inputFromValue, val)
+                        }
                     })
                 }
-                vmodel.label =  options.label ? options.label : vmodel.label;
-                initMsgAndOldValue();
+                vmodel.label =  options.label ? options.label : vmodel.label
+                initMsgAndOldValue()
             } 
         }
         // 根据参数个数进行日期的初始日期设置
         function setValues(len, from, to) {
-            if(len) {
-                if(len==2) {
-                    vmodel.inputFromValue = inputFrom.value = from && options.parseDate(from) && from || "";
-                    vmodel.inputToValue = inputTo.value = to && options.parseDate(to) && to || "";
-                    vmodel.label = options.datesDisplayFormat(options.defaultLabel,vmodel.inputFromValue, vmodel.inputToValue);
+            var fromValue = "",
+                toValue = "";
+            if (len) {
+                if (len==2) {
+                    if (avalon.type(from) === "date") {
+                        fromValue = formatDate(from)
+                    } else {
+                        fromValue = from && parseDate(from) && from || "";
+                    }
+
+                    if (avalon.type(to) === "date") {
+                        toValue = formatDate(to)
+                    } else {
+                        toValue = to && parseDate(to) && to || ""
+                    }
+
+                    vmodel.inputFromValue = inputFrom.value = fromValue
+                    vmodel.inputToValue = inputTo.value = toValue
+
+                    vmodel.label = datesDisplayFormat(vmodel.defaultLabel, fromValue, toValue)
                 } else if(len==1){
-                    vmodel.inputFromValue = inputFrom.value = from && options.parseDate(from) && from || "";
+                    if (avalon.type(from) === "date") {
+                        fromValue = formatDate(from)
+                    } else {
+                        fromValue = from && parseDate(from) && from || ""
+                    }
+                    vmodel.inputFromValue = inputFrom.value = fromValue
                 }
-                if(!vmodel.inputToValue) { // 只要inputTo.value为null都提示不限日期
-                    vmodel.label = "不限日期";
+                if(!vmodel.inputToValue && !vmodel.inputFromValue) { // 只要inputTo.value为null都提示不限日期
+                    vmodel.label = "不限日期"
                 }
             }
         }
         // 根据rules的设置确定结束日期可选的范围及默认值
         function applyRules(date) {
             var df = {},
-                rules = vmodel.rules;
-            for(var i = 0 , type = ['defaultDate', 'minDate', 'maxDate'] ; i < type.length ; i++){
+                rules = vmodel.rules,
+                minDate = _toMinDate && parseDate(_toMinDate), 
+                maxDate = _toMaxDate && parseDate(_toMaxDate),
+                minDateRule,
+                maxDateRule,
+                initFromDate,
+                inputToInitValue,
+                initToDate,
+                toMinDateFormat,
+                inputToDate;
+            for (var i = 0 , type = ['defaultDate', 'minDate', 'maxDate'] ; i < type.length; i++) {
                 if (rangeRules[i]) {
-                    df[type[i]] = calcDate(rangeRules[i], date);
+                    df[type[i]] = calcDate(rangeRules[i], date)
                 }
             }
-            var minDate = _toMinDate && options.parseDate(_toMinDate), 
-                maxDate = _toMaxDate && options.parseDate(_toMaxDate),
-                minDateRule = df['minDate'],
-                maxDateRule = df['maxDate'];
-            minDate = (minDateRule ? minDateRule.getTime() : -1) > (minDate ? minDate.getTime() : -1) ? minDateRule : minDate ;
-            maxDate = (maxDateRule ? maxDateRule.getTime() : Number.MAX_VALUE) > (maxDate ? maxDate.getTime() : Number.MAX_VALUE) ? maxDate : maxDateRule;
-            if(!vmodel.inputToValue && df["defaultDate"]){
-                vmodel.inputToValue = options.formatDate(df["defaultDate"]);
-            }
-            if(minDate){
-                var toMinDateFormat = options.formatDate(minDate);
-                rules.toMinDate = toMinDateFormat;
-                if(!vmodel.inputToValue) {
-                    vmodel.inputToValue = toMinDateFormat;
+            minDateRule = df['minDate']
+            maxDateRule = df['maxDate']
+            minDate = (minDateRule ? minDateRule.getTime() : -1) > (minDate ? minDate.getTime() : -1) ? minDateRule : minDate
+            maxDate = (maxDateRule ? maxDateRule.getTime() : Number.MAX_VALUE) > (maxDate ? maxDate.getTime() : Number.MAX_VALUE) ? maxDate : maxDateRule
+            if (element.init) {
+                initFromDate = parseDate(vmodel.inputFromValue)
+                inputToInitValue = duplexTo && duplexTo[1][duplexTo[0]] || ""
+                initToDate = parseDate(inputToInitValue)
+                if (initFromDate && inputToInitValue && !initToDate) {
+                    vmodel.inputToValue = formatDate(df["defaultDate"])
+                    vmodel.label = datesDisplayFormat(options.defaultLabel,vmodel.inputFromValue, vmodel.inputToValue)
                 }
             }
-            if(maxDate) {
-                rules.toMaxDate = options.formatDate(maxDate);
+            if (minDate){
+                toMinDateFormat = formatDate(minDate)
+                rules.toMinDate = toMinDateFormat
+                if (!vmodel.inputToValue && !element.init) {
+                    vmodel.inputToValue = toMinDateFormat
+                }
             }
-            var inputToDate = vmodel.inputToValue && vmodel.parseDate(vmodel.inputToValue);
-            if(inputToDate && isDateDisabled(inputToDate, minDate, maxDate)) {
-                vmodel.inputToValue = toMinDateFormat;
+            if (maxDate) {
+                rules.toMaxDate = formatDate(maxDate)
+            }
+            inputToDate = vmodel.inputToValue && parseDate(vmodel.inputToValue)
+            if (inputToDate && isDateDisabled(inputToDate, minDate, maxDate)) {
+                inputTo.value = toMinDateFormat
+                vmodel.inputToValue = toMinDateFormat
+            }
+            if (element.init) {
+                element.init = false
             }
         }
         // 根据minDate和maxDate的设置判断给定的日期是否不可选
         function isDateDisabled(date, minDate, maxDate){
-            var time = date.getTime();
+            var time = date.getTime()
             if(minDate && time < minDate.getTime()){
-                return true;
+                return true
             } else if(maxDate && time > maxDate.getTime()) {
-                return true;
+                return true
             }
-            return false;
+            return false
         }
         // 解析rules.rules属性，得到正确的日期值
         function calcDate( desc , date ){
-            var time;
-            desc = ( desc || "" ).toString();
-            time = date ? date : new Date();
-            var _date = new Date(time);
-            var re = /([+-])?(\d+)([MDY])?/g , 
-                arr = re.exec(desc),
-                key = arr && ((arr[1] || '+') + (arr[3] || 'D'));
+            var time,
+                re = /([+-])?(\d+)([MDY])?/g,
+                arr,
+                key,
+                _date;
+            desc = ( desc || "" ).toString()
+            
+            arr = re.exec(desc)
+            key = arr && ((arr[1] || '+') + (arr[3] || 'D'))
+            time = date ? date : new Date()
+            _date = new Date(time)
             if(key && _c[key]){
-                _c[key](_date ,arr[2] * 1);
+                _c[key](_date ,arr[2] * 1)
             }
-            return _date;
+            return _date
         }
         function initMsgAndOldValue() {
-            _oldValue = [options.parseDate(inputFrom.value), options.parseDate(inputTo.value)];
-
+            _oldValue = [parseDate(inputFrom.value), parseDate(inputTo.value)]
             if(vmodel.label) {
-                updateMsg();
+                updateMsg()
             }
         }
         // 根据选择的日期更新日历框下方的显示内容
         function updateMsg() {
             var msg = "",
                 day = 0,
-                inputToDate = options.parseDate(inputTo.value),
+                inputToValue = vmodel.inputToValue,
+                inputFromValue = vmodel.inputFromValue,
+                inputToDate = parseDate(inputToValue),
                 msgFormat = options.opts && options.opts.msgFormat,
                 inputFromDate = null;
-            if(inputTo.value && !inputToDate) {
-                vmodel.inputToValue = "";
+            if(inputToValue && !inputToDate) {
+                vmodel.inputToValue = ""
             } 
-            if(inputTo.value && (inputFrom.value || fromSelected)) {
-                inputFromDate = options.parseDate(inputFrom.value) || fromSelected;
-                day = Math.floor(((inputToDate.getTime()-inputFromDate.getTime()))/1000/60/60/24 +1);
+            if(inputToValue && (inputFromValue || fromSelected)) {
+                inputFromDate = parseDate(inputFromValue) || fromSelected
+                day = Math.floor(((inputToDate.getTime()-inputFromDate.getTime()))/1000/60/60/24 +1)
                 if(msgFormat && typeof msgFormat === "function") {
-                    var from = {
-                            getRawValue: function() {
-                                return inputFrom.value;
-                            },
-                            getDate: function() {
-                                return options.parseDate(inputFrom.value) || cleanDate(new Date());
-                            }
-                        },
-                        to = {
-                            getRawValue: function() {
-                                return inputTo.value;
-                            },
-                            getDate: function() {
-                                return inputToDate;
-                            }
-                        };
-                    msg = options.opts.msgFormat(from, to);
+                    msg = options.opts.msgFormat(inputFrom.vmodel, inputTo.vmodel)
                 } else {
-                    msg = "已选时间段："+inputFrom.value+" 至 "+inputTo.value+" 共计"+day+"天";
-                }
-                vmodel.msg = msg;
-                
+                    msg = "已选时间段："+inputFromValue+" 至 "+inputToValue+" 共计"+day+"天"
+                } 
+            } else {
+                msg = ""     
             }
-            fromSelected ? fromSelected = null : 0;
+            vmodel.msg = msg
+            fromSelected ? fromSelected = null : 0
         }
         // 将日期时间转为00:00:00
         function cleanDate( date ){
-            date.setHours(0);
-            date.setMinutes(0);
-            date.setSeconds(0);
-            date.setMilliseconds(0);
-            return date;
+            date.setHours(0)
+            date.setMinutes(0)
+            date.setSeconds(0)
+            date.setMilliseconds(0)
+            return date
         }
         vmodel.$watch("toggle", function(val) {
             if(!val && !_confirmClick) {
-                inputFrom.value = vmodel.inputFromValue;
-                inputTo.value = vmodel.inputToValue;
+                inputFrom.value = vmodel.inputFromValue = formatDate(_oldValue && _oldValue[0] || "") 
+                inputTo.value = vmodel.inputToValue = formatDate(_oldValue && _oldValue[1] || "") 
             } else if(_confirmClick){
-                vmodel.inputFromValue = inputFrom.value;
-                vmodel.inputToValue = inputTo.value;
-                _confirmClick = false;
+                vmodel.inputFromValue = inputFrom.value
+                vmodel.inputToValue = inputTo.value
+                _confirmClick = false
+            }
+            if (val) {
+                avalon.type(vmodel.onOpen) === "function" && vmodel.onOpen(vmodel)
+            } else {
+                avalon.type(vmodel.onClose) === "function" && vmodel.onClose(vmodel)
             }
         })
-        return vmodel;
+        return vmodel
     }
     widget.version = 1.0
     widget.defaults = {
@@ -392,33 +506,40 @@ define(["avalon.getModel",
         separator: "-",
         startDay: 1,    //星期开始时间
         dateRangeWidth: 260,
+        shortcut: false,
+        onOpen: avalon.noop, //打开daterangepicker后的回调
+        onClose: avalon.noop, //关闭daterangepicker后的回调
         onSelect: avalon.noop, //点击确定按钮选择日期后的回调
         parseDate: function(str){
-            var separator = this.separator;
-            var reg = "^(\\d{4})" + separator+ "(\\d{1,2})"+ separator+"(\\d{1,2})$";
-            reg = new RegExp(reg);
-            var x = str.match(reg);
-            return x ? new Date(x[1],x[2] * 1 -1 , x[3]) : null;
+            var separator = this.separator
+            var reg = "^(\\d{4})" + separator+ "(\\d{1,2})"+ separator+"(\\d{1,2})$"
+            reg = new RegExp(reg)
+            var x = str.match(reg)
+            return x ? new Date(x[1],x[2] * 1 -1 , x[3]) : null
         },
         formatDate: function(date){
+            if (avalon.type(date) !== "date") return ""
             var separator = this.separator,
                 year = date.getFullYear(), 
                 month = date.getMonth(), 
-                day = date.getDate();
-            return year + separator + this.formatNum( month + 1 , 2 ) + separator + this.formatNum( day , 2 );
+                day = date.getDate()
+            return year + separator + this.formatNum( month + 1 , 2 ) + separator + this.formatNum( day , 2 )
         },
         formatNum: function(n , length){
-            n = String(n);
+            n = String(n)
             for( var i = 0 , len = length - n.length ; i < len ; i++)
-                n = "0" + n;
-            return n;
+                n = "0" + n
+            return n
         },
         datesDisplayFormat: function(label, fromDate, toDate) {
-            return label + "：" + fromDate + ' 至 ' + toDate;
+            if (!fromDate && !toDate) {
+                return "不限日期"
+            }
+            return label + "：" + fromDate + ' 至 ' + toDate
         },
         getTemplate: function(str, options) {
-            return str;
+            return str
         }
     }
-    return avalon;
+    return avalon
 })

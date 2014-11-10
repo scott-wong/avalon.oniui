@@ -9,7 +9,7 @@
 <script src="../highlight/shCore.js"></script>
 <script src="../avalon.js"></script>
 </head>
-<body class="ms-controller">
+<body>
     <div class="wrapper">
         <h1>daterangepicker demo</h1>
         <div class="demo-show" ms-controller="demo">
@@ -26,9 +26,22 @@
             <script> 
                 require("datepicker/avalon.daterangepicker", function(avalon) {
                     var model = avalon.define("demo", function(vm) {
+                        vm.fromK = "2014-07-28"
+                        vm.toK = "2014-08-04"
+                        vm.lRules = {
+                            rules: 'null, 0D, 8D',
+                            fromMinDate: '2014-05-02',
+                            fromMaxDate: '2014-06-28',
+                            toMinDate: '2014-06-01',
+                            toMaxDate: '2014-07-12'
+                        }
+
                         vm.$aOpts = {
                             opts: {
                                 msgFormat: function(from, to) {
+                                    if (!from || !to) {
+                                        return
+                                    }
                                     return '已选时间段：' + from.getRawValue() + ' 至 ' + to.getRawValue() + ' 共计' + (Math.floor( (to.getDate().getTime() - from.getDate().getTime())/1000/60/60/24 + 1 ) - 1) + '晚';
                                 }
                             }

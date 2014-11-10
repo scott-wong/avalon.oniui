@@ -1,8 +1,8 @@
 /**
-  * @description flipswitch组件，将checkbox表单元素转化成富UI的开关
+  * @description flipswitch组件，将checkbox表单元素转化成富UI的开关，不支持ms-duplex，请在onChange回调里面处理类似ms-duplex逻辑
   *
   */
-define(["avalon", "text!./avalon.flipswitch.html", "draggable/avalon.draggable", "css!./avalon.flipswitch.css", "css!../chameleon/oniui-common.css"], function(avalon, template) {
+define(["avalon", "text!./avalon.flipswitch.html", "../draggable/avalon.draggable", "css!./avalon.flipswitch.css", "css!../chameleon/oniui-common.css"], function(avalon, template) {
 
     var svgSupport = !!document.createElementNS && !!document.createElementNS('http://www.w3.org/2000/svg', 'svg').createSVGRect,
         radiusSupport =typeof avalon.cssName("border-radius") == "string"
@@ -39,9 +39,17 @@ define(["avalon", "text!./avalon.flipswitch.html", "draggable/avalon.draggable",
             vm.$skipArray = ["widgetElement", "template"]
             vm.$svgSupport = svgSupport
             if(vm.size == "large") {
-                vm.draggerRadius = 12
-                vm.height = 30
-                vm.width = 57
+                vm.draggerRadius = 19
+                vm.height = 38
+                vm.width = 76
+            } else if(vm.size == "mini") {
+                vm.draggerRadius = 7
+                vm.height = 12
+                vm.width = 28
+            } else if(vm.size == "small") {
+                vm.draggerRadius = 9
+                vm.height = 18
+                vm.width = 36
             }
             var newDiv, 
                 inputEle, 
@@ -102,15 +110,14 @@ define(["avalon", "text!./avalon.flipswitch.html", "draggable/avalon.draggable",
             vm.$init = function() {
                 if(inited) return
                 inited = true
-                if(!svgSupport) {
-                    document.namespaces.add("v", "urn:schemas-microsoft-com:vml")
-                }
                 var divCon = avalon.parseHTML(formateTpl(vmodel.template))
                 newDiv = divCon.childNodes[0]
                 insertAfer(element, newDiv)
                 divCon = null
 
                 inputEle = element
+                // 阻止节点移除事件触发$destroy
+                inputEle.msRetain = true;
 
                 inputEle.parentNode.removeChild(inputEle)
                 inputEle.style.display = "none"
@@ -122,6 +129,12 @@ define(["avalon", "text!./avalon.flipswitch.html", "draggable/avalon.draggable",
                 inputEle.setAttribute("ms-checked", "checked")
 
                 newDiv.appendChild(inputEle)
+                inputEle.msRetain = false;
+
+                avalon.scan(newDiv, [vmodel].concat(vmodels))
+
+                vmodel._draw()
+
 
                 bar = newDiv.firstChild
 
@@ -130,6 +143,7 @@ define(["avalon", "text!./avalon.flipswitch.html", "draggable/avalon.draggable",
                     bar = bar.nextSibling
                 }
                 bar.style[vmodel.dir] = vmodel._addthisCss()
+
                 if(vmodel.draggable) {
                     dragger = bar.firstChild
                     while(dragger) {
@@ -144,11 +158,8 @@ define(["avalon", "text!./avalon.flipswitch.html", "draggable/avalon.draggable",
                             avaElem.data("draggable" + _key, typeof item != "function" ? item : key)
                         })
                     }
+                    avalon.scan(bar, [vmodel].concat(vmodels))
                 }
-
-                avalon.scan(newDiv, [vmodel].concat(vmodels))
-
-                vmodel._draw()
 
                 // callback after inited
                 if(typeof options.onInit === "function" ) {
@@ -340,8 +351,8 @@ define(["avalon", "text!./avalon.flipswitch.html", "draggable/avalon.draggable",
         offColor: "#D5D5D5", //\@param 未选中情况颜色，会尝试自动到样式文件里面提取
         disabledColor: "#DEDEDE",//\@param 禁用情况颜色，会尝试自动到样式文件里面提取
         draggerRadius: 7, //\@param normal size拖动头半径，会尝试自动到样式文件里面提取
-        height: 18,   //\@param normal size高度，会尝试自动到样式文件里面提取
-        width: 305,    //\@param normal size宽度，会尝试自动到样式文件里面提取
+        height: 24,   //\@param normal size高度，会尝试自动到样式文件里面提取
+        width: 48,    //\@param normal size宽度，会尝试自动到样式文件里面提取
         css3support: false,
         //@optMethod onInit(vmodel, options, vmodels) 完成初始化之后的回调,call as element's method
         onInit: avalon.noop,
